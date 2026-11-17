@@ -11,10 +11,34 @@ TEMAS = [
     "Una idea rápida de IA para conseguir más clientes en redes sociales siendo autónomo",
     "Pregunta abierta a autónomos sobre cómo usan la IA en su negocio",
 ]
-MODELO = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+API = "https://generativelanguage.googleapis.com/v1beta"
+
+
+def elegir_modelo():
+    """Busca el modelo Flash mas reciente disponible (Google retira modelos viejos)."""
+    if os.environ.get("GEMINI_MODEL"):
+        return os.environ["GEMINI_MODEL"]
+    req = urllib.request.Request(f"{API}/models?pageSize=200",
+                                 headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        modelos = json.load(r).get("models", [])
+    nombres = [m["name"].split("/")[-1] for m in modelos
+               if "generateContent" in m.get("supportedGenerationMethods", [])]
+    buenos = [n for n in nombres if "flash" in n and not re.search(r"lite|image|tts|audio|live|thinking|exp", n)]
+    estables = [n for n in buenos if "preview" not in n] or buenos
+    if not estables:
+        sys.exit(f"No encuentro modelo Flash. Disponibles: {nombres}")
+    elegido = sorted(estables, key=lambda n: [int(x) for x in re.findall(r"\d+", n)][:2], reverse=True)[0]
+    print("Modelo Gemini:", elegido)
+    return elegido
+
+
+MODELO = None
 
 
 def redactar(tema):
+    global MODELO
+    MODELO = MODELO or elegir_modelo()
     prompt = (
         "Eres el community manager de la cuenta de X @IAautonomosES (IA para Autónomos), "
         "dirigida a autónomos y pymes de España. Escribe UN solo post para X sobre: " + tema +
@@ -22,7 +46,7 @@ def redactar(tema):
         "máximo 1 hashtag, máximo 1 emoji, sin promesas exageradas. Devuelve SOLO el texto del post."
     )
     req = urllib.request.Request(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{MODELO}:generateContent",
+        f"{API}/models/{MODELO}:generateContent",
         data=json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode(),
         headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]},
     )
