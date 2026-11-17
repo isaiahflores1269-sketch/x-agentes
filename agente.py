@@ -50,7 +50,7 @@ def redactar(tema):
         data=json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode(),
         headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]},
     )
-    with urllib.request.urlopen(req, timeout=60) as r:
+    with urllib.request.urlopen(req, timeout=180) as r:
         data = json.load(r)
     return data["candidates"][0]["content"]["parts"][0]["text"].strip().strip('"').strip()
 
@@ -75,9 +75,14 @@ def publicar(t):
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(line_buffering=True)
     tema = TEMAS[datetime.date.today().weekday()]
     for intento in range(3):  # el verificador puede pedir hasta 3 borradores
-        texto = redactar(tema)
+        try:
+            texto = redactar(tema)
+        except Exception as e:  # Gemini lento o caido: reintenta
+            print(f"Intento {intento+1}: fallo al redactar ({e}); reintento")
+            continue
         problemas = verificar(texto)
         print(f"Borrador {intento+1}: {texto}\nProblemas: {problemas or 'ninguno'}")
         if not problemas:
