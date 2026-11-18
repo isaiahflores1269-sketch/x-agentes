@@ -26,13 +26,34 @@ def x():
                          os.environ["X_ACCESS_TOKEN"], os.environ["X_ACCESS_SECRET"])
 
 
+LITE = None
+
+
+def elegir_lite():
+    """Para respuestas cortas: el Flash-Lite más reciente (mucho más rápido). Si no hay, el Flash normal."""
+    req = urllib.request.Request(f"{agente.API}/models?pageSize=200",
+                                 headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        modelos = json.load(r).get("models", [])
+    lites = [m["name"].split("/")[-1] for m in modelos
+             if "generateContent" in m.get("supportedGenerationMethods", [])
+             and "flash-lite" in m["name"] and not re.search(r"image|tts|audio|live", m["name"])]
+    estables = [n for n in lites if "preview" not in n] or lites
+    if not estables:
+        return agente.elegir_modelo()
+    elegido = sorted(estables, key=lambda n: [int(x) for x in re.findall(r"\d+", n)][:2], reverse=True)[0]
+    print("Modelo Gemini (lite):", elegido)
+    return elegido
+
+
 def gemini(prompt):
-    agente.MODELO = agente.MODELO or agente.elegir_modelo()
+    global LITE
+    LITE = LITE or elegir_lite()
     req = urllib.request.Request(
-        f"{agente.API}/models/{agente.MODELO}:generateContent",
+        f"{agente.API}/models/{LITE}:generateContent",
         data=json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode(),
         headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=180) as r:
+    with urllib.request.urlopen(req, timeout=90) as r:
         return json.load(r)["candidates"][0]["content"]["parts"][0]["text"].strip().strip('"').strip()
 
 
