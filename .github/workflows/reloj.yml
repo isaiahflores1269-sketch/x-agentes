@@ -19,4 +19,6 @@ jobs:
           case " 9 14 20 " in *" $H "*) gh workflow run post-diario.yml -R "$REPO" -f solo_prueba=0 && echo "Post lanzado";; esac
           case " 10 18 " in *" $H "*) gh workflow run crecimiento.yml -R "$REPO" && echo "Crecimiento lanzado";; esac
           case " 9 12 15 18 21 " in *" $H "*) gh workflow run menciones.yml -R "$REPO" && echo "Menciones lanzado";; esac
+          D=$(TZ=Europe/Madrid date +%u)   # 2 = martes, 4 = jueves
+          if [ "$H" = "12" ] && { [ "$D" = "2" ] || [ "$D" = "4" ]; }; then gh workflow run hilo.yml -R "$REPO" -f solo_prueba=0 && echo "Hilo lanzado"; fi
           echo "Hecho"
