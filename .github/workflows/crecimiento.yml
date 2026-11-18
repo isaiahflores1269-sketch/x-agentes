@@ -1,0 +1,25 @@
+name: Buscar conversaciones (crecimiento)
+on:
+  schedule:
+    - cron: "41 9 * * 1-5"   # 10:41 Madrid (invierno), de lunes a viernes
+  workflow_dispatch:
+permissions:
+  issues: write
+  contents: read
+jobs:
+  crecimiento:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests-oauthlib
+      - run: python crecimiento.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
