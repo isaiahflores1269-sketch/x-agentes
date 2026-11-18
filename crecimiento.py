@@ -1,11 +1,11 @@
 """Agente de crecimiento: busca posts recientes de autónomos/pymes españoles, Gemini propone
 una respuesta útil (sin autopromoción) y la deja como Issue para aprobar con la etiqueta 'aprobar'."""
-import os, re, sys
+import os, re, sys, time
 from menciones import gh, x, gemini
 
-CONSULTA = ('(autónomo OR autónomos OR autónoma OR pyme OR "mi negocio" OR "mi empresa") '
-            '(IA OR ChatGPT OR facturas OR presupuesto OR clientes OR Hacienda OR impagos OR redes) '
-            'lang:es -is:retweet -is:reply -is:quote')
+CONSULTA = ('("soy autónomo" OR "soy autónoma" OR "como autónomo" OR "los autónomos" OR "cuota de autónomos" '
+            'OR "mi pyme" OR "mi negocio" OR "pequeño negocio" OR "mis clientes") '
+            'lang:es -is:retweet -is:reply -is:quote -has:links')
 MAX_PROPUESTAS = 5
 
 
@@ -40,16 +40,22 @@ if __name__ == "__main__":
     print(f"{len(posts)} candidatos")
     for p in posts[:MAX_PROPUESTAS]:
         user = users.get(p["author_id"], {}).get("username", "?")
-        try:
-            borrador = gemini(
-                "Eres @IAautonomosES, cuenta de X que ayuda a autónomos y pymes de España con IA. "
-                f"@{user} ha publicado: \"{p['text']}\". Escribe UNA respuesta que aporte valor real "
-                "(un consejo concreto, una herramienta o un prompt corto) relacionado con lo que dice. "
-                "Español de España, cercana, máximo 240 caracteres, sin enlaces, sin hashtags, "
-                "sin vender nada ni mencionar tu cuenta. Si el post no tiene que ver con negocios, es "
-                "polémico (política, quejas personales) o es spam, responde solo: IGNORAR. Devuelve SOLO el texto.")
-        except Exception as e:
-            borrador = f"(Gemini falló: {e}) Escribe tú la respuesta en un comentario."
+        borrador = None
+        for _ in range(3):  # Gemini a veces da 503: reintenta
+            try:
+                borrador = gemini(
+                    "Eres @IAautonomosES, cuenta de X que ayuda a autónomos y pymes de España con IA. "
+                    f"@{user} ha publicado: \"{p['text']}\". Escribe UNA respuesta que aporte valor real "
+                    "(un consejo concreto, una herramienta o un prompt corto) relacionado con lo que dice. "
+                    "Español de España, cercana, máximo 240 caracteres, sin enlaces, sin hashtags, "
+                    "sin vender nada ni mencionar tu cuenta. Si el post no tiene que ver con negocios, es "
+                    "polémico (política, quejas personales) o es spam, responde solo: IGNORAR. Devuelve SOLO el texto.")
+                break
+            except Exception as e:
+                print("Gemini falló:", e)
+                time.sleep(20)
+        if not borrador:
+            print("Sin borrador, se salta", p["id"]); continue
         if borrador.upper().startswith("IGNORAR"):
             print("Ignorado", p["id"]); continue
         gh("POST", "/issues", {
