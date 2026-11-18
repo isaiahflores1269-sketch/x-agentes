@@ -3,8 +3,9 @@ una respuesta útil (sin autopromoción) y la deja como Issue para aprobar con l
 import os, re, sys, time
 from menciones import gh, x, gemini
 
-CONSULTA = ('("soy autónomo" OR "soy autónoma" OR "como autónomo" OR "los autónomos" OR "cuota de autónomos" '
-            'OR "mi pyme" OR "mi negocio" OR "pequeño negocio" OR "mis clientes") '
+# Vocabulario propio de España para no captar posts de Latinoamérica
+CONSULTA = ('("soy autónomo" OR "soy autónoma" OR "cuota de autónomos" OR "los autónomos" OR "tarifa plana" '
+            'OR "modelo 303" OR "Verifactu" OR "darme de alta de autónomo" OR "mi gestoría") '
             'lang:es -is:retweet -is:reply -is:quote -has:links')
 MAX_PROPUESTAS = 5
 
@@ -48,7 +49,7 @@ if __name__ == "__main__":
                     f"@{user} ha publicado: \"{p['text']}\". Escribe UNA respuesta que aporte valor real "
                     "(un consejo concreto, una herramienta o un prompt corto) relacionado con lo que dice. "
                     "Español de España, cercana, máximo 240 caracteres, sin enlaces, sin hashtags, "
-                    "sin vender nada ni mencionar tu cuenta. Si el post no tiene que ver con negocios, es "
+                    "sin vender nada ni mencionar tu cuenta. Si el post no parece de alguien de España, no tiene que ver con negocios, es "
                     "polémico (política, quejas personales) o es spam, responde solo: IGNORAR. Devuelve SOLO el texto.")
                 break
             except Exception as e:
