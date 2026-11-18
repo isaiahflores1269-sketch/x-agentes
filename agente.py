@@ -74,7 +74,7 @@ def redactar(tema):
         "Eres el community manager de la cuenta de X @IAautonomosES (IA para Autónomos), "
         "dirigida a autónomos y pymes de España. Escribe UN solo post para X sobre: " + tema +
         ". Formato: " + FORMATOS[franja] + ". Empieza con una primera frase que enganche (un problema real "
-        "del autónomo). Reglas: español de España, tono cercano y práctico, máximo 260 caracteres, sin enlaces, "
+        "del autónomo). Reglas: español de España, tono cercano y práctico, MÁXIMO 220 caracteres en total, sin enlaces, "
         "máximo 1 hashtag, máximo 1 emoji, sin promesas exageradas. Devuelve SOLO el texto del post."
     )
     dia = datetime.date.today().toordinal()
@@ -93,6 +93,18 @@ def redactar(tema):
     with urllib.request.urlopen(req, timeout=180) as r:
         data = json.load(r)
     return data["candidates"][0]["content"]["parts"][0]["text"].strip().strip('"').strip()
+
+
+def acortar(texto):
+    req = urllib.request.Request(
+        f"{API}/models/{MODELOS[0]}:generateContent",
+        data=json.dumps({"contents": [{"parts": [{"text":
+            "Acorta este post de X a menos de 240 caracteres manteniendo el gancho, la idea y la frase final "
+            "(sin enlaces). Devuelve SOLO el texto: " + texto}]}]}).encode(),
+        headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]},
+    )
+    with urllib.request.urlopen(req, timeout=90) as r:
+        return json.load(r)["candidates"][0]["content"]["parts"][0]["text"].strip().strip('"').strip()
 
 
 def verificar(t):
@@ -125,6 +137,13 @@ if __name__ == "__main__":
             time.sleep(20)
             continue
         problemas = verificar(texto)
+        if problemas == ["más de 280 caracteres"]:  # agente corrector: acorta en vez de tirar el borrador
+            try:
+                corto = acortar(texto)
+                if not verificar(corto):
+                    texto, problemas = corto, []
+            except Exception as e:
+                print("No se pudo acortar:", e)
         print(f"Borrador {intento+1}: {texto}\nProblemas: {problemas or 'ninguno'}")
         if not problemas:
             break
