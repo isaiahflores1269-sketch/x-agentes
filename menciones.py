@@ -51,7 +51,7 @@ def gemini(prompt):
     LITE = LITE or elegir_lite()
     req = urllib.request.Request(
         f"{agente.API}/models/{LITE}:generateContent",
-        data=json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode(),
+        data=json.dumps({"contents": [{"parts": [{"text": agente.contexto_fecha() + prompt}]}]}).encode(),
         headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]})
     with urllib.request.urlopen(req, timeout=90) as r:
         return json.load(r)["candidates"][0]["content"]["parts"][0]["text"].strip().strip('"').strip()

@@ -24,6 +24,51 @@ FORMATOS = [
     "un prompt listo para copiar entre comillas, con [corchetes] para que el lector lo personalice",
     "un error o mito frecuente sobre el tema, y termina con una pregunta a la audiencia para generar respuestas",
 ]
+MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+         "septiembre", "octubre", "noviembre", "diciembre"]
+ESTACIONES = {12: "invierno", 1: "invierno", 2: "invierno", 3: "primavera", 4: "primavera", 5: "primavera",
+              6: "verano", 7: "verano", 8: "verano", 9: "otoño", 10: "otoño", 11: "otoño"}
+
+
+CAMPANAS = {
+    1: "cuesta de enero, rebajas, modelos trimestrales de Hacienda hasta el día 30",
+    2: "San Valentín, planificación del trimestre",
+    3: "fin del primer trimestre, primavera, Semana Santa cercana",
+    4: "Semana Santa, modelos trimestrales de Hacienda hasta el día 20, campaña de la Renta",
+    5: "campaña de la Renta, preparar el verano",
+    6: "fin de la Renta, inicio del verano, cierre del semestre",
+    7: "verano, modelos trimestrales hasta el día 20, vacaciones",
+    8: "agosto y vacaciones, preparar la vuelta en septiembre",
+    9: "vuelta al cole y a la actividad, fin del tercer trimestre",
+    10: "modelos trimestrales hasta el día 20, Halloween, preparar Black Friday",
+    11: "Black Friday, Cyber Monday, preparar Navidad y el cierre de año",
+    12: "Navidad, cierre de año, planificar el año nuevo",
+}
+
+
+def contexto_fecha():
+    """Frase con la fecha real, para que la IA no hable de otra época del año."""
+    hoy = datetime.date.today()
+    mes, est = MESES[hoy.month - 1], ESTACIONES[hoy.month]
+    return (f"CONTEXTO: hoy es {hoy.day} de {mes} de {hoy.year} ({est} en España). Si mencionas una época del año, "
+            f"festividades o campañas, que sean las de ahora o las próximas semanas ({CAMPANAS[hoy.month]}). "
+            f"No hables de otra estación, mes o año. ")
+
+
+def fuera_de_fecha(t):
+    """Detecta menciones a estaciones o meses lejanos a la fecha actual."""
+    hoy = datetime.date.today()
+    est_actual = ESTACIONES[hoy.month]
+    vecinas = {ESTACIONES[(hoy.month % 12) + 1], est_actual}
+    malas = [e for e in ("verano", "primavera", "otoño", "invierno") if e not in vecinas and re.search(rf"\b{e}\b", t, re.I)]
+    cerca = {MESES[(hoy.month - 1 + d) % 12] for d in (-1, 0, 1, 2)}
+    malas += [m for m in MESES if m not in cerca and re.search(rf"\b{m}\b", t, re.I)]
+    for y in re.findall(r"\b(20\d\d)\b", t):
+        if int(y) not in (hoy.year, hoy.year + 1):
+            malas.append(y)
+    return malas
+
+
 API = "https://generativelanguage.googleapis.com/v1beta"
 
 
@@ -70,7 +115,7 @@ def redactar(tema):
     MODELO = MODELOS[min(INTENTO, len(MODELOS) - 1)] if INTENTO < 2 else MODELOS[0]
     INTENTO += 1
     franja = turno()
-    prompt = (
+    prompt = contexto_fecha() + (
         "Eres el community manager de la cuenta de X @IAautonomosES (IA para Autónomos), "
         "dirigida a autónomos y pymes de España. Escribe UN solo post para X sobre: " + tema +
         ". Formato: " + FORMATOS[franja] + ". Empieza con una primera frase que enganche (un problema real "
@@ -99,7 +144,7 @@ def acortar(texto):
     req = urllib.request.Request(
         f"{API}/models/{MODELOS[0]}:generateContent",
         data=json.dumps({"contents": [{"parts": [{"text":
-            "Acorta este post de X a menos de 240 caracteres manteniendo el gancho, la idea y la frase final "
+            contexto_fecha() + "Acorta este post de X a menos de 240 caracteres manteniendo el gancho, la idea y la frase final "
             "(sin enlaces). Devuelve SOLO el texto: " + texto}]}]}).encode(),
         headers={"Content-Type": "application/json", "x-goog-api-key": os.environ["GEMINI_API_KEY"]},
     )
@@ -113,6 +158,7 @@ def verificar(t):
     if len(t) > 280: problemas.append("más de 280 caracteres")
     if re.search(r"https?://|www\.", t, re.I): problemas.append("contiene enlace")
     if t.count("#") > 2: problemas.append("demasiados hashtags")
+    if fuera_de_fecha(t): problemas.append(f"habla de otra época del año: {fuera_de_fecha(t)}")
     return problemas
 
 
