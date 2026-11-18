@@ -45,6 +45,13 @@ def redactar(tema):
         ". Reglas: español de España, tono cercano y práctico, máximo 260 caracteres, sin enlaces, "
         "máximo 1 hashtag, máximo 1 emoji, sin promesas exageradas. Devuelve SOLO el texto del post."
     )
+    dia = datetime.date.today().toordinal()
+    if dia % 5 == 0:  # 1 de cada 5 posts promociona el kit (sin enlace: los enlaces cuestan más en la API)
+        prompt += (" Termina con una frase natural invitando a descargar gratis 10 prompts de IA para autónomos "
+                   "desde el enlace de la bio. No pongas ningún enlace.")
+    elif dia % 5 == 2:
+        prompt += (" Termina mencionando de forma natural que en la bio está el Kit IA para Autónomos con 100 prompts "
+                   "por 9 euros. No pongas ningún enlace.")
     req = urllib.request.Request(
         f"{API}/models/{MODELO}:generateContent",
         data=json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode(),
