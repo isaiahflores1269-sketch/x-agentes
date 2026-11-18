@@ -1,5 +1,5 @@
 """Agentes de @IAautonomosES: elige tema -> redacta (Gemini gratis) -> verifica -> publica en X."""
-import datetime, json, os, re, sys, urllib.request
+import datetime, json, os, re, sys, time, urllib.request
 from requests_oauthlib import OAuth1Session
 
 TEMAS = [
@@ -14,31 +14,42 @@ TEMAS = [
 API = "https://generativelanguage.googleapis.com/v1beta"
 
 
-def elegir_modelo():
-    """Busca el modelo Flash mas reciente disponible (Google retira modelos viejos)."""
+def elegir_modelos():
+    """Devuelve [Flash-Lite mas reciente, Flash mas reciente]: Lite es rapido; Flash queda de reserva."""
     if os.environ.get("GEMINI_MODEL"):
-        return os.environ["GEMINI_MODEL"]
+        return [os.environ["GEMINI_MODEL"]]
     req = urllib.request.Request(f"{API}/models?pageSize=200",
                                  headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]})
     with urllib.request.urlopen(req, timeout=60) as r:
         modelos = json.load(r).get("models", [])
     nombres = [m["name"].split("/")[-1] for m in modelos
                if "generateContent" in m.get("supportedGenerationMethods", [])]
-    buenos = [n for n in nombres if "flash" in n and not re.search(r"lite|image|tts|audio|live|thinking|exp", n)]
-    estables = [n for n in buenos if "preview" not in n] or buenos
-    if not estables:
+    def mejor(lista):
+        estables = [n for n in lista if "preview" not in n] or lista
+        return sorted(estables, key=lambda n: [int(x) for x in re.findall(r"\d+", n)][:2], reverse=True)[0] if estables else None
+    excluir = r"image|tts|audio|live|thinking|exp"
+    lite = mejor([n for n in nombres if "flash-lite" in n and not re.search(excluir, n)])
+    flash = mejor([n for n in nombres if "flash" in n and "lite" not in n and not re.search(excluir, n)])
+    elegidos = [m for m in (lite, flash) if m]
+    if not elegidos:
         sys.exit(f"No encuentro modelo Flash. Disponibles: {nombres}")
-    elegido = sorted(estables, key=lambda n: [int(x) for x in re.findall(r"\d+", n)][:2], reverse=True)[0]
-    print("Modelo Gemini:", elegido)
-    return elegido
+    print("Modelos Gemini:", elegidos)
+    return elegidos
 
 
-MODELO = None
+def elegir_modelo():  # compatibilidad con menciones.py
+    return elegir_modelos()[-1]
+
+
+MODELOS = None
+INTENTO = 0
 
 
 def redactar(tema):
-    global MODELO
-    MODELO = MODELO or elegir_modelo()
+    global MODELOS, INTENTO
+    MODELOS = MODELOS or elegir_modelos()
+    MODELO = MODELOS[min(INTENTO, len(MODELOS) - 1)] if INTENTO < 2 else MODELOS[0]
+    INTENTO += 1
     prompt = (
         "Eres el community manager de la cuenta de X @IAautonomosES (IA para Autónomos), "
         "dirigida a autónomos y pymes de España. Escribe UN solo post para X sobre: " + tema +
@@ -84,11 +95,12 @@ def publicar(t):
 if __name__ == "__main__":
     sys.stdout.reconfigure(line_buffering=True)
     tema = TEMAS[datetime.date.today().weekday()]
-    for intento in range(3):  # el verificador puede pedir hasta 3 borradores
+    for intento in range(4):  # el verificador puede pedir hasta 3 borradores
         try:
             texto = redactar(tema)
         except Exception as e:  # Gemini lento o caido: reintenta
             print(f"Intento {intento+1}: fallo al redactar ({e}); reintento")
+            time.sleep(20)
             continue
         problemas = verificar(texto)
         print(f"Borrador {intento+1}: {texto}\nProblemas: {problemas or 'ninguno'}")
