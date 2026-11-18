@@ -1,0 +1,20 @@
+name: Prueba Threads
+on:
+  workflow_dispatch:
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python - <<'PY'
+          import threads, sys
+          texto = ("🎁 Regalo para autónomos y pymes: 10 prompts de IA listos para copiar en ChatGPT, Gemini o Claude.\n\n"
+                   "Presupuestos, reclamar impagos, responder a clientes, Google Maps, trámites...\n\n"
+                   "Gratis y descarga directa 👇\nautonomize8.gumroad.com/l/10-prompts-gratis")
+          pid = threads.publicar(texto)
+          threads.renovar_token()
+          sys.exit(0 if pid else 1)
+          PY
+        env:
+          THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
