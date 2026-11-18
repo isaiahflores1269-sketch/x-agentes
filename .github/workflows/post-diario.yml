@@ -1,7 +1,7 @@
-name: Post diario en X
+name: Posts diarios en X (3 al día)
 on:
   schedule:
-    - cron: "17 8 * * *"   # 9:17 en Madrid (invierno)
+    - cron: "17 8,13,19 * * *"   # 9:17, 14:17 y 20:17 en Madrid (invierno)
   workflow_dispatch:
     inputs:
       solo_prueba:

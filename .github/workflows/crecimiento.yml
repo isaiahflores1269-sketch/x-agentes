@@ -1,7 +1,7 @@
 name: Buscar conversaciones (crecimiento)
 on:
   schedule:
-    - cron: "41 9 * * 1-5"   # 10:41 Madrid (invierno), de lunes a viernes
+    - cron: "41 8,17 * * *"   # 9:41 y 18:41 Madrid (invierno), todos los días
   workflow_dispatch:
 permissions:
   issues: write
