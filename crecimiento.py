@@ -3,10 +3,14 @@ una respuesta útil (sin autopromoción) y la deja como Issue para aprobar con l
 import os, re, sys, time
 from menciones import gh, x, gemini
 
-# Vocabulario propio de España para no captar posts de Latinoamérica
-CONSULTA = ('("soy autónomo" OR "soy autónoma" OR "cuota de autónomos" OR "los autónomos" OR "tarifa plana" '
-            'OR "modelo 303" OR "Verifactu" OR "darme de alta de autónomo" OR "mi gestoría") '
-            'lang:es -is:retweet -is:reply -is:quote -has:links')
+# Vocabulario propio de España y personas hablando en primera persona (no partidos ni medios)
+CONSULTA = ('("soy autónomo" OR "soy autónoma" OR "como autónomo" OR "mi cuota de autónomo" OR "tarifa plana" '
+            'OR "modelo 303" OR "Verifactu" OR "mi gestoría" OR "mis clientes") '
+            'lang:es -is:retweet -is:reply -is:quote -has:links -is:verified')
+# Política y temas polémicos: nunca responder
+POLITICA = re.compile(r"(\bpp\b|ppopular|psoe|\bvox\b|\bsumar\b|podemos|\biu\b|feij|abascal|gobierno|ministr|"
+                      r"diputad|congreso|senado|elecciones|izquierda|derecha|facha|comunis|independentis|"
+                      r"frenteampl|pedro s[aá]nchez|yolanda d[ií]az|#\w*29n)", re.I)
 MAX_PROPUESTAS = 5
 
 
@@ -32,7 +36,8 @@ if __name__ == "__main__":
     users = {u["id"]: u for u in data.get("includes", {}).get("users", [])}
     vistos = ya_vistos()
     posts = [p for p in data.get("data", []) if p["id"] not in vistos
-             and users.get(p["author_id"], {}).get("username", "").lower() != "iaautonomoses"]
+             and users.get(p["author_id"], {}).get("username", "").lower() != "iaautonomoses"
+             and not POLITICA.search(p["text"]) and len(p["text"]) > 40]
     # prioriza los que tienen algo de interacción y autores con audiencia
     def puntos(p):
         m = p.get("public_metrics", {}); f = users.get(p["author_id"], {}).get("public_metrics", {}).get("followers_count", 0)
