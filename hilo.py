@@ -63,8 +63,10 @@ if __name__ == "__main__":
     if os.environ.get("SOLO_PRUEBA") == "1":
         sys.exit(print("Modo prueba: no se publica."))
     from menciones import x
-    s, anterior = x(), None
+    import threads
+    s, anterior, anterior_th = x(), None, None
     for p in posts:
+        anterior_th = threads.publicar(p, anterior_th) if (anterior_th or p is posts[0]) else None
         cuerpo = {"text": p}
         if anterior:
             cuerpo["reply"] = {"in_reply_to_tweet_id": anterior}

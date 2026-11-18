@@ -170,6 +170,9 @@ def publicar(t):
     r = x.post("https://api.x.com/2/tweets", json={"text": t})
     print(r.status_code, r.text)
     r.raise_for_status()
+    import threads  # mismo post en Threads (si está configurado)
+    threads.publicar(t)
+    threads.renovar_token()
 
 
 if __name__ == "__main__":
