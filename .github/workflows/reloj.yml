@@ -1,0 +1,22 @@
+name: Reloj (lanza las tareas a su hora)
+# Lo dispara cron-job.org cada hora (minuto 17) porque los horarios de GitHub no funcionan en esta cuenta.
+on:
+  workflow_dispatch:
+permissions:
+  actions: write
+  contents: read
+jobs:
+  reloj:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decidir qué toca según la hora de Madrid
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          H=$(TZ=Europe/Madrid date +%-H)
+          echo "Hora Madrid: $H"
+          case " 9 14 20 " in *" $H "*) gh workflow run post-diario.yml -R "$REPO" -f solo_prueba=0 && echo "Post lanzado";; esac
+          case " 10 18 " in *" $H "*) gh workflow run crecimiento.yml -R "$REPO" && echo "Crecimiento lanzado";; esac
+          case " 9 12 15 18 21 " in *" $H "*) gh workflow run menciones.yml -R "$REPO" && echo "Menciones lanzado";; esac
+          echo "Hecho"
