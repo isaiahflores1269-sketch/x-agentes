@@ -11,7 +11,7 @@ CONSULTA = ('("soy autónomo" OR "soy autónoma" OR "como autónomo" OR "mi cuot
 POLITICA = re.compile(r"(\bpp\b|ppopular|psoe|\bvox\b|\bsumar\b|podemos|\biu\b|feij|abascal|gobierno|ministr|"
                       r"diputad|congreso|senado|elecciones|izquierda|derecha|facha|comunis|independentis|"
                       r"frenteampl|pedro s[aá]nchez|yolanda d[ií]az|#\w*29n)", re.I)
-MAX_PROPUESTAS = 5
+MAX_PROPUESTAS = 8
 
 
 def ya_vistos():
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     gh("POST", "/labels", {"name": "aprobar", "color": "2ea043", "description": "Publica la respuesta en X"})
     s = x()
     r = s.get("https://api.x.com/2/tweets/search/recent", params={
-        "query": CONSULTA, "max_results": 10, "expansions": "author_id",
+        "query": CONSULTA, "max_results": 20, "expansions": "author_id",
         "tweet.fields": "public_metrics,created_at", "user.fields": "username,public_metrics"})
     print(r.status_code); r.raise_for_status()
     data = r.json()

@@ -92,6 +92,26 @@ if __name__ == "__main__":
                 "Si es spam u ofensivo responde solo: IGNORAR. Devuelve SOLO el texto.")
         except Exception as e:
             borrador = f"(Gemini falló: {e}) Escribe tú la respuesta en un comentario."
+        # Publicación automática si pasa la doble verificación (la API sí permite responder a menciones)
+        ok = (borrador and not borrador.upper().startswith("IGNORAR") and not borrador.startswith("(Gemini")
+              and len(borrador) <= 260 and not re.search(r"https?://|www\.", borrador, re.I))
+        if ok:
+            try:
+                veredicto = gemini(
+                    f"Mención recibida de @{user}: \"{m['text']}\". Respuesta que vamos a publicar: \"{borrador}\". "
+                    "¿Es apropiada, educada, útil, sin datos inventados ni temas polémicos, y adecuada para una "
+                    "cuenta de consejos de IA para autónomos? Responde solo SI o NO.")
+                ok = veredicto.strip().upper().startswith("SI")
+            except Exception:
+                ok = False
+        if ok:
+            r2 = s.post("https://api.x.com/2/tweets", json={"text": borrador, "reply": {"in_reply_to_tweet_id": m["id"]}})
+            print("Auto-respuesta", r2.status_code, r2.text)
+            if r2.ok:
+                i = gh("POST", "/issues", {"title": f"Mención {m['id']} de @{user}", "labels": ["mencion"],
+                       "body": f"**@{user} escribió:**\n> {m['text']}\n\n✅ Respondida automáticamente:\n> {borrador}"})
+                if i: gh("PATCH", f"/issues/{i['number']}", {"state": "closed"})
+                continue
         gh("POST", "/issues", {
             "title": f"Mención {m['id']} de @{user}",
             "labels": ["mencion"],
