@@ -172,6 +172,8 @@ def publicar(t):
     r.raise_for_status()
     import threads  # mismo post en Threads (si está configurado)
     threads.publicar(t)
+    if turno() == 1:  # el post del mediodía (prompt para copiar) también va a Instagram como imagen
+        json.dump({"texto": t}, open("ig_pendiente.json", "w"), ensure_ascii=False)
     threads.renovar_token()
 
 
