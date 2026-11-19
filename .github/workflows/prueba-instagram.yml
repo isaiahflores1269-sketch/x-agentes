@@ -1,0 +1,26 @@
+name: Prueba Instagram
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ig:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Publicar prueba en Instagram
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: |
+          echo "Token empieza por: ${INSTAGRAM_TOKEN:0:3}"
+          cat > ig_pendiente.json <<'J'
+          {"texto": "Truco rápido para autónomos: antes de enviar un presupuesto, pídele a la IA que lo revise como si fuera tu cliente. Te dirá qué no se entiende y qué objeciones pondrá. Menos idas y vueltas, más presupuestos aceptados."}
+          J
+          pip install playwright && python -m playwright install --with-deps chromium
+          python instagram.py render
+          git config user.name "agente-ia" && git config user.email "agente@users.noreply.github.com"
+          git add imagenes && git commit -m "Imagen Instagram prueba" && git push
+          python instagram.py publish
