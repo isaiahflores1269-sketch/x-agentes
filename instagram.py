@@ -1,7 +1,7 @@
 """Instagram: convierte el post del mediodía en una imagen con la marca y la publica.
 Uso:  python instagram.py render   -> crea imagenes/AAAA-MM-DD.png desde ig_pendiente.json
       python instagram.py publish  -> publica esa imagen (debe estar ya en GitHub, repo público)"""
-import datetime, html, json, os, sys, time, urllib.parse, urllib.request
+import datetime, html, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "isaiahflores1269-sketch/x-agentes")
 HOY = datetime.date.today().isoformat()
@@ -16,11 +16,7 @@ BUSINESS = "1720912682930055"
 def cuenta():
     if not SISTEMA:
         return "me"
-    if os.environ.get("IG_USER_ID"):
-        return os.environ["IG_USER_ID"]
-    u = f"{API}/{BUSINESS}/owned_instagram_accounts?access_token={TOKEN}"
-    with urllib.request.urlopen(u, timeout=60) as r:
-        return json.load(r)["data"][0]["id"]
+    return os.environ.get("IG_USER_ID", "17841480914390825")  # @iaautonomoses
 
 PLANTILLA = """<html><head><link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap' rel='stylesheet'>
 <style>body{{margin:0;width:1080px;height:1350px;background:#0f1b33;font-family:Inter;color:#fff;position:relative;overflow:hidden}}
@@ -55,8 +51,11 @@ def render():
 def _post(ruta, params):
     params["access_token"] = TOKEN
     req = urllib.request.Request(f"{API}/{ruta}", data=urllib.parse.urlencode(params).encode(), method="POST")
-    with urllib.request.urlopen(req, timeout=90) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(req, timeout=90) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"{e.code} {e.read().decode()[:400]}")
 
 
 def publish():
