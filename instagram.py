@@ -6,7 +6,21 @@ import datetime, html, json, os, sys, time, urllib.parse, urllib.request
 REPO = os.environ.get("GITHUB_REPOSITORY", "isaiahflores1269-sketch/x-agentes")
 HOY = datetime.date.today().isoformat()
 IMG = f"imagenes/{HOY}.png"
-API = "https://graph.instagram.com/v21.0"
+TOKEN = os.environ.get("INSTAGRAM_TOKEN", "")
+# Token de usuario del sistema (empieza por EAA, no caduca) -> Graph de Facebook; si no, Graph de Instagram
+SISTEMA = TOKEN.startswith("EAA")
+API = "https://graph.facebook.com/v21.0" if SISTEMA else "https://graph.instagram.com/v21.0"
+BUSINESS = "1720912682930055"
+
+
+def cuenta():
+    if not SISTEMA:
+        return "me"
+    if os.environ.get("IG_USER_ID"):
+        return os.environ["IG_USER_ID"]
+    u = f"{API}/{BUSINESS}/owned_instagram_accounts?access_token={TOKEN}"
+    with urllib.request.urlopen(u, timeout=60) as r:
+        return json.load(r)["data"][0]["id"]
 
 PLANTILLA = """<html><head><link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap' rel='stylesheet'>
 <style>body{{margin:0;width:1080px;height:1350px;background:#0f1b33;font-family:Inter;color:#fff;position:relative;overflow:hidden}}
@@ -39,7 +53,7 @@ def render():
 
 
 def _post(ruta, params):
-    params["access_token"] = os.environ["INSTAGRAM_TOKEN"]
+    params["access_token"] = TOKEN
     req = urllib.request.Request(f"{API}/{ruta}", data=urllib.parse.urlencode(params).encode(), method="POST")
     with urllib.request.urlopen(req, timeout=90) as r:
         return json.load(r)
@@ -53,17 +67,20 @@ def publish():
                "#autonomos #pymes #inteligenciaartificial #emprendedores #chatgpt #productividad")
     url = f"https://raw.githubusercontent.com/{REPO}/main/{IMG}"
     time.sleep(20)  # que GitHub sirva ya la imagen recién subida
-    cont = _post("me/media", {"image_url": url, "caption": caption})["id"]
+    yo = cuenta()
+    cont = _post(f"{yo}/media", {"image_url": url, "caption": caption})["id"]
     for _ in range(10):  # esperar a que Instagram procese la imagen
         time.sleep(6)
         try:
-            pid = _post("me/media_publish", {"creation_id": cont})["id"]
+            pid = _post(f"{yo}/media_publish", {"creation_id": cont})["id"]
             print("Instagram OK", pid)
             break
         except Exception as e:
             print("Esperando a Instagram...", e)
     else:
         sys.exit("Instagram no pudo publicar.")
+    if SISTEMA:
+        return  # el token de sistema no caduca
     try:  # alarga 60 días el token
         urllib.request.urlopen("https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token"
                                f"&access_token={os.environ['INSTAGRAM_TOKEN']}", timeout=60)
