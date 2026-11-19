@@ -7,6 +7,8 @@ on:
       solo_prueba:
         description: "1 = generar sin publicar"
         default: "1"
+permissions:
+  contents: write
 jobs:
   publicar:
     runs-on: ubuntu-latest
@@ -25,3 +27,14 @@ jobs:
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
           SOLO_PRUEBA: ${{ github.event.inputs.solo_prueba || '0' }}
+      - name: Instagram (imagen del post del mediodía)
+        if: hashFiles('ig_pendiente.json') != ''
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: |
+          if [ -z "$INSTAGRAM_TOKEN" ]; then echo "Instagram sin configurar"; exit 0; fi
+          pip install playwright && python -m playwright install --with-deps chromium
+          python instagram.py render
+          git config user.name "agente-ia" && git config user.email "agente@users.noreply.github.com"
+          git add imagenes && git commit -m "Imagen Instagram $(date +%F)" && git push
+          python instagram.py publish
