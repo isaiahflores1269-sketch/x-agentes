@@ -22,5 +22,5 @@ jobs:
           pip install playwright && python -m playwright install --with-deps chromium
           python instagram.py render
           git config user.name "agente-ia" && git config user.email "agente@users.noreply.github.com"
-          git add imagenes && git commit -m "Imagen Instagram prueba" && git push
+          git add imagenes && (git commit -m "Imagen Instagram prueba" && git push || true)
           python instagram.py publish
