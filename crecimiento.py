@@ -5,7 +5,7 @@ from menciones import gh, x, gemini
 
 # Vocabulario propio de España y personas hablando en primera persona (no partidos ni medios)
 CONSULTA = ('("soy autónomo" OR "soy autónoma" OR "como autónomo" OR "mi cuota de autónomo" OR "tarifa plana" '
-            'OR "modelo 303" OR "Verifactu" OR "mi gestoría" OR "mis clientes") '
+            'OR "modelo 303" OR "Verifactu" OR "mi gestoría" OR "facturación electrónica" OR "Hacienda me") '
             'lang:es -is:retweet -is:reply -is:quote -has:links -is:verified')
 # Política y temas polémicos: nunca responder
 POLITICA = re.compile(r"(\bpp\b|ppopular|psoe|\bvox\b|\bsumar\b|podemos|\biu\b|feij|abascal|gobierno|ministr|"
